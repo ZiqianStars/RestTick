@@ -23,6 +23,15 @@ macOS 菜单栏护眼休息提醒。按“实际使用电脑的时间”计时�
 
 完整需求与实现状态见 [docs/requirements.md](docs/requirements.md)，模块与数据流见 [docs/architecture.html](docs/architecture.html)。
 
+## 获取代码
+
+```bash
+git clone https://github.com/ZiqianStars/RestTick.git
+cd RestTick
+```
+
+仓库地址：<https://github.com/ZiqianStars/RestTick>
+
 ## 构建与运行
 
 ### 环境
@@ -191,8 +200,11 @@ NOTARY_PROFILE=<配置名> ./scripts/package.sh
 - **语言**：界面仅简体中文。
 - **可访问性**：图标按钮有 `accessibilityLabel`，但遮罩文字对比度依赖图片压暗蒙版，未做专项无障碍测试。
 - **图片授权**：仅保留 5 张来自 Pexels 的内置图，遵循 Pexels License；仓库内不再包含其他来源的图片素材。
-- **许可证**：仓库尚未添加开源许可证，公开发布前需要确定 License。
+
+## 许可证
+
+[MIT License](LICENSE)，Copyright (c) 2026 wenjuxu。
 
 ## 状态
 
-当前为可运行的 1.0.0 版本，已完成计时、遮罩、图库、自启、URL 触发、测试与 DMG 打包流程；尚未创建远程仓库。
+当前为可运行的 1.0.0 版本，已完成计时、遮罩、图库、自启、URL 触发、测试与 DMG 打包流程；代码托管在 [GitHub](https://github.com/ZiqianStars/RestTick)。
