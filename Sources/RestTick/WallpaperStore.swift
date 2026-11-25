@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import CryptoKit
 import ImageIO
 
 /// 本地护眼图：内置 5 张随 App 打包的风景照片，首次运行时复制到图库目录，
@@ -149,8 +150,10 @@ final class WallpaperStore {
         if images.isEmpty {
             let builtins = builtinItems(in: folder)
             let builtinRecords = builtins.map { url -> String in
-                let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
-                return "\(url.lastPathComponent):\(size)"
+                let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+                let size = values?.fileSize ?? 0
+                let modified = Int(values?.contentModificationDate?.timeIntervalSince1970 ?? 0)
+                return "\(url.lastPathComponent):\(size):\(modified)"
             }
             signature += "|builtin=" + builtinRecords.joined(separator: ",")
             return ScanResult(items: builtins, signature: signature)
@@ -170,7 +173,7 @@ final class WallpaperStore {
     }
 
     /// 内置图随 App 打包在 Resources/Backgrounds，首次运行时复制到图库目录，
-    /// 这样「打开图库」能看到、也能随时替换。
+    /// 之后每次扫描按内容哈希比对，内置图有更新就覆盖同名旧图。
     private static let builtinNames = [
         "resttick-01.jpg",
         "resttick-02.jpg",
@@ -187,23 +190,36 @@ final class WallpaperStore {
 
         var result: [URL] = []
         for name in builtinNames {
-            let url = folder.appendingPathComponent(name)
-            if !isLoadable(url) {
-                try? FileManager.default.removeItem(at: url)
-                do {
-                    try FileManager.default.copyItem(
-                        at: bundleFolder.appendingPathComponent(name),
-                        to: url
-                    )
-                } catch {
-                    Log.wallpaper.error(
-                        "复制内置图失败 \(name, privacy: .public)：\(error.localizedDescription, privacy: .public)"
-                    )
-                }
-            }
-            if isLoadable(url) { result.append(url) }
+            let source = bundleFolder.appendingPathComponent(name)
+            let destination = folder.appendingPathComponent(name)
+            syncBuiltin(named: name, from: source, to: destination)
+            if isLoadable(destination) { result.append(destination) }
         }
         return result
+    }
+
+    /// 用内容哈希判断运行时副本是否过期；缺失、损坏或内容变化时都重新复制。
+    private static func syncBuiltin(named name: String, from source: URL, to destination: URL) {
+        guard let sourceHash = contentHash(of: source) else {
+            Log.wallpaper.error("读取内置图失败：\(name, privacy: .public)")
+            return
+        }
+        if contentHash(of: destination) == sourceHash { return }
+
+        try? FileManager.default.removeItem(at: destination)
+        do {
+            try FileManager.default.copyItem(at: source, to: destination)
+            Log.wallpaper.notice("已同步内置图：\(name, privacy: .public)")
+        } catch {
+            Log.wallpaper.error(
+                "复制内置图失败 \(name, privacy: .public)：\(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    private static func contentHash(of url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     /// 旧版本在应用支持目录里生成的渐变图，已被内置照片取代，顺手清理。

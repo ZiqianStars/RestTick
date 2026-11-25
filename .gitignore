@@ -13,6 +13,7 @@ DerivedData/
 ._*
 
 # 编辑器 / 调试
+.screenshots/
 *.xcuserstate
 xcuserdata/
 *.log

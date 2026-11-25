@@ -84,7 +84,13 @@ swift build -c release
 - 自定义文件名不要以 `resttick-` 开头，这个前缀保留给内置图。
 - 图片会按屏幕像素长边降采样（1600–4096），并做 EXIF 方向矫正；不需要手动缩放。
 - 删除自定义图片后，如果目录为空，会回退到随 App 打包的 5 张内置图。
-- 内置图来自 Pexels，遵循 [Pexels License](https://www.pexels.com/license/)；来源记录见 [previews/wallpaper-candidates/index.html](previews/wallpaper-candidates/index.html)。
+- 内置图来自 Pexels，遵循 [Pexels License](https://www.pexels.com/license/)；原始文件见 `Resources/Backgrounds/`。
+
+### 替换内置图
+
+想换掉 App 自带的 5 张图，直接替换 `Resources/Backgrounds/resttick-01.jpg` … `resttick-05.jpg`，保持文件名不变，然后重新构建 App。
+
+首次运行会把新图复制到运行时图库目录。之后 App 会按内容哈希比对内置图：重新构建后如果同名旧图内容不同，会自动覆盖，不需要手动删除。自定义图片不受影响。
 
 ## URL 与启动参数触发
 
@@ -173,10 +179,6 @@ NOTARY_PROFILE=<配置名> ./scripts/package.sh
 ├── docs/
 │   ├── requirements.md           # 需求列表与实现状态
 │   └── architecture.html         # 项目架构图
-├── previews/
-│   ├── panel-concepts.html       # 菜单面板设计稿
-│   ├── wallpaper-candidates/     # 内置图候选与来源记录
-│   └── bing-eye-care/            # Bing 护眼图个人候选（非内置图）
 └── .vscode/launch.json           # 调试配置
 ```
 
@@ -188,7 +190,7 @@ NOTARY_PROFILE=<配置名> ./scripts/package.sh
 - **免打扰场景**：不检测全屏演示、视频会议或系统勿扰模式，只通过“防显示器休眠”断言做媒体豁免。
 - **语言**：界面仅简体中文。
 - **可访问性**：图标按钮有 `accessibilityLabel`，但遮罩文字对比度依赖图片压暗蒙版，未做专项无障碍测试。
-- **图片授权**：内置图来自 Pexels，授权明确；`previews/bing-eye-care/` 下是 Bing 图片搜索的个人使用候选，版权归原站点与原作者，授权未确认，**不要打包进 App 或用于商业用途**。
+- **图片授权**：仅保留 5 张来自 Pexels 的内置图，遵循 Pexels License；仓库内不再包含其他来源的图片素材。
 - **许可证**：仓库尚未添加开源许可证，公开发布前需要确定 License。
 
 ## 状态
