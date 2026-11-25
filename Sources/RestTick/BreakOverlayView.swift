@@ -36,7 +36,7 @@ struct BreakOverlayView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 40)
 
-                    Text("休息一下")
+                    Text(L10n.t("休息一下"))
                         .font(.system(size: 26, weight: .regular, design: .rounded))
                         .tracking(6)
                         .opacity(0.9)
@@ -50,7 +50,7 @@ struct BreakOverlayView: View {
 
                     Spacer().frame(height: 10)
 
-                    Text("看看远处，活动肩颈，让眼睛放松")
+                    Text(L10n.t("看看远处，活动肩颈，让眼睛放松"))
                         .font(.system(size: 16, weight: .regular))
                         .opacity(0.78)
 
@@ -63,8 +63,8 @@ struct BreakOverlayView: View {
                     Spacer().frame(height: 24)
 
                     HStack(spacing: 26) {
-                        Button("暂停 30 分钟") { engine.pause(minutes: 30) }
-                        Button("今天不再提醒") { engine.pauseToday() }
+                        Button(L10n.t("暂停 30 分钟")) { engine.pause(minutes: 30) }
+                        Button(L10n.t("今天不再提醒")) { engine.pauseToday() }
                     }
                     .buttonStyle(.plain)
                     .font(.system(size: 12.5))
@@ -112,7 +112,7 @@ struct HoldToSkipButton: View {
                 .stroke(.white.opacity(0.85), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                 .padding(1)
 
-            Text(progress > 0.02 ? "继续按住…" : "按住 3 秒跳过本次休息")
+            Text(L10n.t(progress > 0.02 ? "继续按住…" : "按住 3 秒跳过本次休息"))
                 .font(.system(size: 13, weight: .medium))
                 .opacity(progress > 0.02 ? 0.95 : 0.7)
         }

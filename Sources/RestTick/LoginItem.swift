@@ -9,7 +9,14 @@ final class LoginItemManager: ObservableObject {
 
     @Published private(set) var isEnabled = false
     @Published private(set) var needsApproval = false
-    @Published private(set) var errorMessage: String?
+    @Published private(set) var operationError: String?
+
+    var errorMessage: String? {
+        if SMAppService.mainApp.status == .notFound {
+            return L10n.t("未找到登录项，请将 RestTick 移到「应用程序」文件夹后再试")
+        }
+        return operationError
+    }
 
     private init() {
         refresh()
@@ -22,15 +29,13 @@ final class LoginItemManager: ObservableObject {
         let status = SMAppService.mainApp.status
         isEnabled = status == .enabled
         needsApproval = status == .requiresApproval
-        if status == .notFound {
-            errorMessage = "未找到登录项，请将 RestTick 移到「应用程序」文件夹后再试"
-        } else if status == .enabled || status == .notRegistered {
-            errorMessage = nil
+        if status == .enabled || status == .notRegistered {
+            operationError = nil
         }
     }
 
     func setEnabled(_ enabled: Bool) {
-        errorMessage = nil
+        operationError = nil
         do {
             if enabled {
                 try SMAppService.mainApp.register()
@@ -39,7 +44,7 @@ final class LoginItemManager: ObservableObject {
             }
             Log.login.notice("登录项已\(enabled ? "注册" : "注销")")
         } catch {
-            errorMessage = error.localizedDescription
+            operationError = error.localizedDescription
             Log.login.error("登录项操作失败：\(error.localizedDescription, privacy: .public)")
         }
         refresh()

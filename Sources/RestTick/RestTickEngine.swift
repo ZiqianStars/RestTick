@@ -8,6 +8,15 @@ enum RestPhase: Equatable {
     case paused(until: Date)
 }
 
+enum EngineNote: Equatable {
+    case locked
+    case breakSkipped
+    case breakCompleted
+    case paused(minutes: Int)
+    case pausedToday
+    case resumed
+}
+
 /// 计时与调度中枢。
 /// 计时以“累计清醒活跃时间”为准：键鼠空闲超阈值、锁屏、屏保时都不计时；
 /// 但有媒体播放（其他进程持有防熄屏断言）时视为仍在使用电脑，空闲也不暂停计时。
@@ -27,13 +36,6 @@ final class RestTickEngine: ObservableObject {
         case paused(until: Date)
     }
 
-    private static let lockNote = "屏幕已锁定，计时暂停"
-    private static let timeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
-
     @Published var focusMinutes: Double = 45 {
         didSet {
             UserDefaults.standard.set(focusMinutes, forKey: Keys.focus)
@@ -51,7 +53,7 @@ final class RestTickEngine: ObservableObject {
     @Published private(set) var remaining: TimeInterval = 45 * 60
     @Published private(set) var isIdle = false
     @Published private(set) var mediaActive = false
-    @Published private(set) var note: String?
+    @Published private(set) var note: EngineNote?
     @Published private(set) var completedBreaks = 0
     @Published private(set) var skippedBreaks = 0
 
@@ -65,6 +67,8 @@ final class RestTickEngine: ObservableObject {
     private var scheduledMode: TimerMode?
     private var activityToken: NSObjectProtocol?
     private var observers: [NSObjectProtocol] = []
+    private var languageObserver: NSObjectProtocol?
+    private var activationObserver: NSObjectProtocol?
     private var screensaverActive = false
     private var screenLocked = false
     private var lastSessionCheck = 0.0
@@ -113,25 +117,26 @@ final class RestTickEngine: ObservableObject {
     var statusText: String {
         switch phase {
         case .counting:
-            if isIdle { return "已离开电脑，计时自动暂停" }
-            if remaining <= prewarnLead && remaining > 0 { return "即将开始休息，请保存手头工作" }
-            if mediaActive { return "检测到媒体播放，继续计时" }
-            return "距离休息还有 \(clockText)"
+            if isIdle { return L10n.t("已离开电脑，计时自动暂停") }
+            if remaining <= prewarnLead && remaining > 0 { return L10n.t("即将开始休息，请保存手头工作") }
+            if mediaActive { return L10n.t("检测到媒体播放，继续计时") }
+            return L10n.t("距离休息还有 %@", clockText)
         case .resting:
-            return "休息中，看看远处放松一下"
+            return L10n.t("休息中，看看远处放松一下")
         case .paused(let until):
-            if pausedForToday { return "今天不再提醒" }
-            return "已暂停，将于 \(Self.timeFormatter.string(from: until)) 恢复"
+            if pausedForToday { return L10n.t("今天不再提醒") }
+            let time = DateFormatter.localizedString(from: until, dateStyle: .none, timeStyle: .short)
+            return L10n.t("已暂停，将于 %@ 恢复", time)
         }
     }
 
     var statusBadge: String {
         switch phase {
-        case .resting: return "休息中"
-        case .paused: return "已暂停"
+        case .resting: return L10n.t("休息中")
+        case .paused: return L10n.t("已暂停")
         case .counting:
-            if isIdle { return "空闲" }
-            return "计时中"
+            if isIdle { return L10n.t("空闲") }
+            return L10n.t("计时中")
         }
     }
 
@@ -140,10 +145,22 @@ final class RestTickEngine: ObservableObject {
         case .resting:
             return clockText
         case .paused:
-            return "暂停"
+            return L10n.t("暂停")
         case .counting:
-            if isIdle { return "空闲" }
+            if isIdle { return L10n.t("空闲") }
             return "\(Int(ceil(remaining / 60)))m"
+        }
+    }
+
+    var noteText: String? {
+        switch note {
+        case .locked: return L10n.t("屏幕已锁定，计时暂停")
+        case .breakSkipped: return L10n.t("本次休息已跳过")
+        case .breakCompleted: return L10n.t("休息完成，继续加油")
+        case .paused(let minutes): return L10n.t("已暂停 %d 分钟", minutes)
+        case .pausedToday: return L10n.t("今天不再提醒")
+        case .resumed: return L10n.t("已恢复计时")
+        case nil: return nil
         }
     }
 
@@ -173,6 +190,19 @@ final class RestTickEngine: ObservableObject {
         lastAwake = MonotonicClock.awakeNow()
         lastContinuous = MonotonicClock.continuousNow()
 
+        languageObserver = NotificationCenter.default.addObserver(
+            forName: .restTickLanguageDidChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.objectWillChange.send() }
+        }
+
+        // 打开菜单或从休眠回到前台时再核对一次截止时间，作为定时器之外的兜底。
+        activationObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.handleWakeGap() }
+        }
+
         registerSystemObservers()
         configureTimer()
         tick()
@@ -199,6 +229,14 @@ final class RestTickEngine: ObservableObject {
             distributedCenter.removeObserver(observer)
         }
         observers.removeAll()
+        if let languageObserver {
+            NotificationCenter.default.removeObserver(languageObserver)
+            self.languageObserver = nil
+        }
+        if let activationObserver {
+            NotificationCenter.default.removeObserver(activationObserver)
+            self.activationObserver = nil
+        }
         overlay.dismissImmediately()
         toast.dismissImmediately()
     }
@@ -222,7 +260,7 @@ final class RestTickEngine: ObservableObject {
         let lockObserver = distributedCenter.addObserver(
             forName: Notification.Name("com.apple.screenIsLocked"), object: nil, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.note = Self.lockNote }
+            Task { @MainActor in self?.note = .locked }
         }
         observers.append(lockObserver)
 
@@ -231,7 +269,7 @@ final class RestTickEngine: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
-                if self.note == Self.lockNote { self.note = nil }
+                if self.note == .locked { self.note = nil }
                 self.handleWake()
             }
         }
@@ -304,7 +342,7 @@ final class RestTickEngine: ObservableObject {
         case .paused(let until):
             setIdle(false)
             updateRemaining(max(0, until.timeIntervalSinceNow))
-            if Date() >= until { resumeFromPause() }
+            if RestTickRules.pauseHasExpired(now: Date(), until: until) { resumeFromPause() }
         }
     }
 
@@ -340,7 +378,7 @@ final class RestTickEngine: ObservableObject {
         if case .resting(let end) = phase, Date() >= end {
             finishBreak(skipped: false)
         }
-        if case .paused(let until) = phase, Date() >= until {
+        if case .paused(let until) = phase, RestTickRules.pauseHasExpired(now: Date(), until: until) {
             resumeFromPause()
         }
         // 唤醒后允许重新提示一次，避免睡醒后错过预告。
@@ -358,7 +396,9 @@ final class RestTickEngine: ObservableObject {
 
     // MARK: - 计时器
 
-    /// 按状态切换计时器频率：计时/休息每秒一次；暂停时只在恢复时刻唤醒一次。
+    /// 按状态切换计时器频率：计时/休息每秒一次；暂停时每 5 秒检查一次是否到期。
+    /// 暂停不依赖一次性 Timer：系统休眠、RunLoop 模式切换或定时器被合并时，
+    /// 单次唤醒可能丢失，重复检查可以兜底。
     private func configureTimer() {
         let mode: TimerMode
         switch phase {
@@ -377,10 +417,8 @@ final class RestTickEngine: ObservableObject {
             timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
                 Task { @MainActor in self?.tick() }
             }
-        case .paused(let until):
-            // 留出一点余量，确保醒来时已经越过恢复时刻。
-            let fireDate = max(until, Date().addingTimeInterval(0.05))
-            timer = Timer(fire: fireDate, interval: 0, repeats: false) { [weak self] _ in
+        case .paused:
+            timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
                 Task { @MainActor in self?.tick() }
             }
         }
@@ -411,10 +449,10 @@ final class RestTickEngine: ObservableObject {
         overlay.dismiss()
         if skipped {
             skippedBreaks += 1
-            note = "本次休息已跳过"
+            note = .breakSkipped
         } else {
             completedBreaks += 1
-            note = "休息完成，继续加油"
+            note = .breakCompleted
         }
         accumulated = 0
         prewarned = false
@@ -442,13 +480,16 @@ final class RestTickEngine: ObservableObject {
         overlay.dismiss()
         toast.dismiss()
         // 休息中暂停：恢复后应重新开始一个完整的计时周期，而不是立刻再弹遮罩。
-        if case .resting = phase { accumulated = 0 }
+        accumulated = RestTickRules.accumulatedAfterPausing(
+            isResting: isResting,
+            accumulated: accumulated
+        )
         pausedForToday = false
         let until = Date().addingTimeInterval(Double(minutes) * 60)
         phase = .paused(until: until)
         remaining = max(0, until.timeIntervalSinceNow)
         prewarned = false
-        note = "已暂停 \(minutes) 分钟"
+        note = .paused(minutes: minutes)
         configureTimer()
     }
 
@@ -456,13 +497,16 @@ final class RestTickEngine: ObservableObject {
         Log.engine.notice("今天不再提醒")
         overlay.dismiss()
         toast.dismiss()
-        if case .resting = phase { accumulated = 0 }
+        accumulated = RestTickRules.accumulatedAfterPausing(
+            isResting: isResting,
+            accumulated: accumulated
+        )
         pausedForToday = true
         let tomorrow = RestTickRules.tomorrowStart(from: Date())
         phase = .paused(until: tomorrow)
         remaining = max(0, tomorrow.timeIntervalSinceNow)
         prewarned = false
-        note = "今天不再提醒"
+        note = .pausedToday
         configureTimer()
     }
 
@@ -473,11 +517,14 @@ final class RestTickEngine: ObservableObject {
 
     private func resumeFromPause() {
         Log.engine.notice("恢复计时")
-        if accumulated >= focusSeconds { accumulated = 0 }
+        accumulated = RestTickRules.accumulatedAfterResuming(
+            accumulated,
+            focusSeconds: focusSeconds
+        )
         pausedForToday = false
         phase = .counting
         prewarned = false
-        note = "已恢复计时"
+        note = .resumed
         isIdle = false
         remaining = max(0, focusSeconds - accumulated)
         // 暂停期间计时器是停的，恢复时重置基准，避免把暂停时长算进使用时间。

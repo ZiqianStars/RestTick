@@ -60,6 +60,33 @@ expectEqual(RestTickRules.refreshedRemaining(current: 0.005, target: -0.2), 0, "
 expectEqual(RestTickRules.refreshedRemaining(current: 10, target: 9.5), 9.5, "正常刷新")
 expectEqual(RestTickRules.refreshedRemaining(current: 10, target: 9.995), 10, "微小变化保持原值")
 
+// 回归：休息中暂停后恢复，必须从完整专注周期重新开始，不能立刻再次休息。
+expectEqual(
+    RestTickRules.accumulatedAfterPausing(isResting: true, accumulated: 2700),
+    0,
+    "休息中暂停清零累计"
+)
+expectEqual(
+    RestTickRules.accumulatedAfterPausing(isResting: false, accumulated: 1200),
+    1200,
+    "计时中暂停保留累计"
+)
+expectEqual(
+    RestTickRules.accumulatedAfterResuming(2700, focusSeconds: 2700),
+    0,
+    "恢复时累计已满则清零"
+)
+expectEqual(
+    RestTickRules.accumulatedAfterResuming(1200, focusSeconds: 2700),
+    1200,
+    "恢复时保留未满累计"
+)
+let pauseStart = Date(timeIntervalSince1970: 1_800_000_000)
+let pauseEnd = pauseStart.addingTimeInterval(1800)
+expect(!RestTickRules.pauseHasExpired(now: pauseEnd.addingTimeInterval(-1), until: pauseEnd), "暂停未到期不恢复")
+expect(RestTickRules.pauseHasExpired(now: pauseEnd, until: pauseEnd), "暂停到点即恢复")
+expect(RestTickRules.pauseHasExpired(now: pauseEnd.addingTimeInterval(60), until: pauseEnd), "暂停超时后恢复")
+
 expect(abs(RestTickRules.fraction(elapsed: 30, total: 60) - 0.5) < 0.0001, "进度 0.5")
 expectEqual(RestTickRules.fraction(elapsed: 120, total: 60), 1, "进度上限 1")
 expectEqual(RestTickRules.fraction(elapsed: -10, total: 60), 0, "进度下限 0")

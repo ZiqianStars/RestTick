@@ -77,19 +77,19 @@ struct MenuBarView: View {
     private var settings: some View {
         VStack(spacing: 0) {
             settingRow(
-                title: "定时时长",
+                title: L10n.t("定时时长"),
                 binding: $engine.focusMinutes,
                 range: 5...180,
                 step: 5,
-                unit: "分钟"
+                unit: L10n.t("分钟")
             )
             Divider().opacity(0.6)
             settingRow(
-                title: "休息时长",
+                title: L10n.t("休息时长"),
                 binding: $engine.breakMinutes,
                 range: 1...30,
                 step: 1,
-                unit: "分钟"
+                unit: L10n.t("分钟")
             )
             Divider().opacity(0.6)
             loginRow
@@ -134,14 +134,14 @@ struct MenuBarView: View {
         label: String
     ) -> some View {
         HStack(spacing: 0) {
-            stepperButton("minus", label: "减少\(label)") {
+            stepperButton("minus", label: L10n.t("减少%@", label)) {
                 adjust(binding, by: -step, in: range)
             }
             Text("\(Int(binding.wrappedValue))")
                 .font(.system(size: 11, weight: .medium))
                 .monospacedDigit()
                 .frame(width: 26)
-            stepperButton("plus", label: "增加\(label)") {
+            stepperButton("plus", label: L10n.t("增加%@", label)) {
                 adjust(binding, by: step, in: range)
             }
         }
@@ -175,7 +175,7 @@ struct MenuBarView: View {
     private var loginRow: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-                Text("开机自动启动")
+                Text(L10n.t("开机自动启动"))
                     .font(.system(size: 12))
                 Spacer()
                 Toggle("", isOn: Binding(
@@ -195,10 +195,10 @@ struct MenuBarView: View {
                     .fixedSize(horizontal: false, vertical: true)
             } else if loginItem.needsApproval {
                 HStack(spacing: 4) {
-                    Text("需在系统设置的「登录项」中允许")
+                    Text(L10n.t("需在系统设置的「登录项」中允许"))
                         .font(.system(size: 10.5))
                         .foregroundStyle(.orange)
-                    Button("去设置") { loginItem.openSystemSettings() }
+                    Button(L10n.t("去设置")) { loginItem.openSystemSettings() }
                         .buttonStyle(.link)
                         .font(.system(size: 10.5))
                 }
@@ -214,7 +214,7 @@ struct MenuBarView: View {
             Button {
                 engine.startBreakNow()
             } label: {
-                Label("现在休息", systemImage: "cup.and.saucer.fill")
+                Label(L10n.t("现在休息"), systemImage: "cup.and.saucer.fill")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -225,7 +225,7 @@ struct MenuBarView: View {
                 Button {
                     engine.resumeNow()
                 } label: {
-                    Text("继续计时").frame(maxWidth: .infinity)
+                    Text(L10n.t("继续计时")).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -234,12 +234,12 @@ struct MenuBarView: View {
                     Button {
                         engine.pause(minutes: 30)
                     } label: {
-                        Text("暂停 30 分钟").frame(maxWidth: .infinity)
+                        Text(L10n.t("暂停 30 分钟")).frame(maxWidth: .infinity)
                     }
                     Button {
                         engine.pauseToday()
                     } label: {
-                        Text("今天不再提醒").frame(maxWidth: .infinity)
+                        Text(L10n.t("今天不再提醒")).frame(maxWidth: .infinity)
                     }
                 }
                 .buttonStyle(.bordered)
@@ -249,12 +249,12 @@ struct MenuBarView: View {
             Button {
                 NSWorkspace.shared.open(WallpaperStore.shared.folderURL)
             } label: {
-                Label("打开图库", systemImage: "folder")
+                Label(L10n.t("打开图库"), systemImage: "folder")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .help("把喜欢的图片放进打开的文件夹，下次休息自动使用")
+            .help(L10n.t("把喜欢的图片放进打开的文件夹，下次休息自动使用"))
         }
     }
 
@@ -262,21 +262,24 @@ struct MenuBarView: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 7) {
-            if let note = engine.note {
+            if let note = engine.noteText {
                 Text(note)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
             HStack {
-                Button("重新计时") { engine.restart() }
+                Button(L10n.t("重新计时")) { engine.restart() }
                     .buttonStyle(.link)
                     .font(.system(size: 11))
                 Spacer()
-                Button("退出 RestTick") { NSApp.terminate(nil) }
+                Button(L10n.t("退出 RestTick")) { NSApp.terminate(nil) }
                     .buttonStyle(.link)
                     .font(.system(size: 11))
             }
-            Text("空闲 90 秒自动暂停计时（播放媒体时除外） · 到点弹出休息遮罩 · 已完成 \(engine.completedBreaks) 次休息")
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L10n.t("空闲 90 秒自动暂停计时（播放媒体时除外）"))
+                Text(L10n.t("到点弹出休息遮罩 · 已完成 %d 次休息", engine.completedBreaks))
+            }
                 .font(.system(size: 9.5))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

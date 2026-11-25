@@ -19,7 +19,23 @@ struct RestTickApp: App {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var isDuplicateInstance = false
+
     func applicationWillFinishLaunching(_ notification: Notification) {
+        // 菜单栏应用只允许一个实例，避免重复的遮罩窗口互相覆盖。
+        if let bundleID = Bundle.main.bundleIdentifier {
+            let currentPID = ProcessInfo.processInfo.processIdentifier
+            let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+                .filter { $0.processIdentifier != currentPID && !$0.isTerminated }
+            if let existing = others.first {
+                isDuplicateInstance = true
+                Log.app.notice("检测到已运行实例，退出本次启动")
+                existing.activate(options: [.activateIgnoringOtherApps])
+                NSApp.terminate(nil)
+                return
+            }
+        }
+
         // 注册 resttick:// URL 处理，这样已运行实例也能被外部触发。
         NSAppleEventManager.shared().setEventHandler(
             self,
@@ -30,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard !isDuplicateInstance else { return }
         NSApp.setActivationPolicy(.accessory)
         Log.app.notice("RestTick 启动")
         RestTickEngine.shared.start()

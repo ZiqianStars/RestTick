@@ -36,6 +36,28 @@ public enum RestTickRules {
         return abs(current - clamped) > 0.01 ? clamped : current
     }
 
+    /// 暂停时的累计值：休息中暂停要清零，恢复后重新走完整专注周期，
+    /// 避免恢复瞬间因为累计已满而立刻再次弹出休息遮罩。
+    public static func accumulatedAfterPausing(
+        isResting: Bool,
+        accumulated: TimeInterval
+    ) -> TimeInterval {
+        isResting ? 0 : accumulated
+    }
+
+    /// 暂停是否已经到期；到点即恢复，避免因为取整或定时器抖动多暂停一轮。
+    public static func pauseHasExpired(now: Date, until: Date) -> Bool {
+        now >= until
+    }
+
+    /// 恢复计时时的累计值：已达到一个完整周期就清零，否则保留原进度。
+    public static func accumulatedAfterResuming(
+        _ accumulated: TimeInterval,
+        focusSeconds: TimeInterval
+    ) -> TimeInterval {
+        accumulated >= focusSeconds ? 0 : accumulated
+    }
+
     /// 0...1 的进度比例；总时长为 0 时返回 0。
     public static func fraction(elapsed: TimeInterval, total: TimeInterval) -> Double {
         guard total > 0 else { return 0 }

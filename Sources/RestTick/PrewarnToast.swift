@@ -81,9 +81,9 @@ struct PrewarnToastView: View {
             .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(seconds) 秒后开始休息")
+                Text(L10n.t("%d 秒后开始休息", seconds))
                     .font(.system(size: 13.5, weight: .semibold))
-                Text("保存一下手头的事，准备起身活动")
+                Text(L10n.t("保存一下手头的事，准备起身活动"))
                     .font(.system(size: 11.5))
                     .opacity(0.72)
             }
