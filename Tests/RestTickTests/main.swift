@@ -54,6 +54,12 @@ expectEqual(RestTickRules.clockText(seconds: 3599), "59:59", "59 分 59 秒")
 expectEqual(RestTickRules.clockText(seconds: 3600), "60:00", "60 分钟")
 expectEqual(RestTickRules.clockText(seconds: -5), "00:00", "负数归零")
 
+// 回归：剩余 0.005 秒时目标归零，不能被 0.01 阈值卡在 00:01。
+expectEqual(RestTickRules.refreshedRemaining(current: 0.005, target: 0), 0, "目标归零时立即归零")
+expectEqual(RestTickRules.refreshedRemaining(current: 0.005, target: -0.2), 0, "目标为负时归零")
+expectEqual(RestTickRules.refreshedRemaining(current: 10, target: 9.5), 9.5, "正常刷新")
+expectEqual(RestTickRules.refreshedRemaining(current: 10, target: 9.995), 10, "微小变化保持原值")
+
 expect(abs(RestTickRules.fraction(elapsed: 30, total: 60) - 0.5) < 0.0001, "进度 0.5")
 expectEqual(RestTickRules.fraction(elapsed: 120, total: 60), 1, "进度上限 1")
 expectEqual(RestTickRules.fraction(elapsed: -10, total: 60), 0, "进度下限 0")

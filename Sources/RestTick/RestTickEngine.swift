@@ -326,7 +326,8 @@ final class RestTickEngine: ObservableObject {
     }
 
     private func updateRemaining(_ value: TimeInterval) {
-        if abs(remaining - value) > 0.01 { remaining = value }
+        let next = RestTickRules.refreshedRemaining(current: remaining, target: value)
+        if remaining != next { remaining = next }
     }
 
     private func handleWake() {

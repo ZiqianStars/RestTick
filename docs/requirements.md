@@ -51,7 +51,7 @@
 | N-12 | 稳定性 | Ad-hoc 签名；release 构建通过；实测休息遮罩与图片轮换无崩溃 | 已实现 |
 | N-13 | 多显示器/分辨率 | 每屏独立窗口；`scaledToFill` 裁切；屏幕参数变化时重建窗口 | 已实现 |
 | N-14 | 可访问性 | 图标按钮带 `accessibilityLabel`；遮罩文字依赖图片压暗蒙版保证对比度，未做专项测试 | 部分实现 |
-| N-15 | 可测试性 | 新增 `Tests/RestTickTests` 测试 target 与 `scripts/test.sh`，覆盖空闲判定、累计封顶、倒计时、进度、跨天/夏令时恢复、内置图规格（32 项检查）；当前工具链为 CommandLineTools，不含 XCTest 且 Swift Testing 宏插件不可用，故采用独立断言运行器 | 已实现 |
+| N-15 | 可测试性 | 新增 `Tests/RestTickTests` 测试 target 与 `scripts/test.sh`，覆盖空闲判定、累计封顶、倒计时与归零、进度、跨天/夏令时恢复、内置图规格（36 项检查）；当前工具链为 CommandLineTools，不含 XCTest 且 Swift Testing 宏插件不可用，故采用独立断言运行器 | 已实现 |
 | N-16 | 性能指标 | 未定义首帧时间、CPU/内存占用等量化目标与基线 | 未实现 |
 | N-17 | 可维护性 | 按职责拆分模块，关键设计（计时校准、缓存、轮换）有注释说明 | 已实现 |
 | N-18 | 分发 | `scripts/package.sh` 生成可拖拽安装的 DMG（已验证挂载与签名）；本机无 Developer ID 证书，当前为 ad-hoc 签名，脚本支持配置证书与 `notarytool` 公证，但未实际执行 | 部分实现 |
@@ -68,7 +68,13 @@
 
 ## 四、本轮变更（N-15 / N-19 / N-18）
 
-- **N-15**：新增 `RestTickCore` 库（纯函数计时规则）与 `Tests/RestTickTests` 测试 target；`scripts/test.sh` 运行 32 项断言。
+- **N-15**：新增 `RestTickCore` 库（纯函数计时规则）与 `Tests/RestTickTests` 测试 target；`scripts/test.sh` 运行 36 项断言。
 - **N-19**：新增 OSLog 统一日志，覆盖状态切换、图库、遮罩、登录项与错误路径。
 - **N-18**：新增 `scripts/package.sh`，生成 `dist/RestTick-1.0.0.dmg`；已验证挂载、应用包结构与签名，公证需外部证书与账号。
+
+## 五、本轮变更（倒计时归零修复）
+
+- 修复休息倒计时卡在 `00:01`、遮罩不撤的问题：显示值刷新有 0.01 秒阈值，剩余 0.005 秒时目标归零被忽略，结束条件 `remaining <= 0` 永远不成立。
+- 新增 `RestTickRules.refreshedRemaining`，目标归零时立即归零；回归测试补充到 36 项。
+- 实测 1 分钟休息 + 1 分钟专注：休息在 60 秒后正常结束并淡出，下一轮休息能自动开始。
 

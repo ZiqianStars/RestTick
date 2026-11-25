@@ -28,6 +28,14 @@ public enum RestTickRules {
         return String(format: "%02d:%02d", total / 60, total % 60)
     }
 
+    /// 刷新倒计时显示值：目标归零时立即归零，避免 0.01 秒的刷新阈值
+    /// 把剩余时间卡在 0.005 秒，界面一直显示 00:01 且结束条件永远不成立。
+    public static func refreshedRemaining(current: TimeInterval, target: TimeInterval) -> TimeInterval {
+        let clamped = max(0, target)
+        guard clamped > 0 else { return 0 }
+        return abs(current - clamped) > 0.01 ? clamped : current
+    }
+
     /// 0...1 的进度比例；总时长为 0 时返回 0。
     public static func fraction(elapsed: TimeInterval, total: TimeInterval) -> Double {
         guard total > 0 else { return 0 }

@@ -116,7 +116,7 @@ open -a "$PWD/dist/RestTick.app" --args --break-now
 ./scripts/test.sh
 ```
 
-测试覆盖空闲判定、计时累计封顶、倒计时文案、进度计算、跨天 / 夏令时恢复、内置图规格等纯逻辑，共 32 项断言。
+测试覆盖空闲判定、计时累计封顶、倒计时文案与归零、进度计算、跨天 / 夏令时恢复、内置图规格等纯逻辑，共 36 项断言。
 
 当前工具链只有 Command Line Tools 时没有 XCTest，测试使用 `Tests/RestTickTests/main.swift` 里的独立断言运行器；被测逻辑集中在 `Sources/RestTickCore`，不依赖 AppKit，便于单独测试。
 
