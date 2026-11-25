@@ -1,0 +1,19 @@
+# SwiftPM
+.build/
+.swiftpm/
+
+# 构建与打包产物
+dist/
+*.dmg
+DerivedData/
+*.xcarchive
+
+# macOS
+.DS_Store
+._*
+
+# 编辑器 / 调试
+*.xcuserstate
+xcuserdata/
+*.log
+*.tmp

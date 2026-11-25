@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:restTick}",
+            "name": "Debug RestTick",
+            "target": "RestTick",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug RestTick"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:restTick}",
+            "name": "Release RestTick",
+            "target": "RestTick",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release RestTick"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:restTick}",
+            "name": "Debug RestTickTests",
+            "target": "RestTickTests",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug RestTickTests"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:restTick}",
+            "name": "Release RestTickTests",
+            "target": "RestTickTests",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release RestTickTests"
+        }
+    ]
+}

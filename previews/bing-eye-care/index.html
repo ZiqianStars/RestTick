@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RestTick · Bing 护眼图候选</title>
+<style>
+  :root {
+    --bg: #0e1114;
+    --panel: #151a1f;
+    --panel-2: #1b2128;
+    --line: #28313a;
+    --text: #e8ecef;
+    --muted: #9aa7b2;
+    --accent: #9fc3b2;
+    --accent-soft: rgba(159, 195, 178, .14);
+    --warn: #d8b98a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(1200px 600px at 70% -10%, #182027 0%, var(--bg) 55%) no-repeat, var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 58px 32px 26px;
+  }
+  .eyebrow {
+    font-size: 11.5px;
+    letter-spacing: .18em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  h1 {
+    margin: 0 0 14px;
+    font-size: 34px;
+    font-weight: 600;
+    letter-spacing: .01em;
+  }
+  .lede {
+    max-width: 800px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 14.5px;
+    line-height: 1.85;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+  .chip {
+    font-size: 11.5px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .02);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  .chip.warn { color: var(--warn); border-color: rgba(216, 185, 138, .35); }
+  .license-card {
+    max-width: 1000px;
+    margin-top: 22px;
+    padding: 16px 18px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+  .license-card strong { color: var(--text); font-weight: 600; }
+  .license-card .warn { color: var(--warn); }
+
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(14, 17, 20, .88);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .toolbar-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .seg {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--panel);
+  }
+  .seg button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 12.5px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .seg button.active { background: var(--accent-soft); color: var(--accent); }
+  .toolbar-note { color: var(--muted); font-size: 12px; }
+
+  main {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 24px 32px 140px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent) inset;
+  }
+  .media {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    background: #000;
+    overflow: hidden;
+  }
+  .media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    cursor: zoom-in;
+  }
+  body.full .media img { object-fit: contain; }
+  .badge, .orient {
+    position: absolute;
+    top: 10px;
+    font-size: 11px;
+    line-height: 1;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: rgba(8, 10, 12, .72);
+    color: #fff;
+    backdrop-filter: blur(8px);
+  }
+  .badge { left: 10px; font-weight: 600; letter-spacing: .06em; }
+  .orient { right: 10px; color: rgba(255, 255, 255, .75); }
+  .card.selected .badge { background: var(--accent); color: #0e1114; }
+  .card-body { padding: 15px 16px 16px; }
+  .title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .card h2 { margin: 0; font-size: 16.5px; font-weight: 600; }
+  .byline { margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+  .specs { display: flex; flex-wrap: wrap; gap: 7px; margin: 11px 0 9px; }
+  .spec {
+    font-size: 10.5px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .note { margin: 0 0 13px; font-size: 12.8px; line-height: 1.75; color: #c3ccd4; }
+  .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .links { display: flex; gap: 13px; font-size: 12px; }
+  .select-btn {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .18s ease, border-color .18s ease, color .18s ease;
+  }
+  .select-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .card.selected .select-btn {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .selection-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    z-index: 30;
+    transform: translate(-50%, 12px);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: calc(100vw - 32px);
+    padding: 9px 10px 9px 18px;
+    background: rgba(21, 26, 31, .96);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, .45);
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .selection-bar.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+  .selection-bar .picked { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .selection-bar .picked b { color: var(--text); font-weight: 600; }
+  .bar-btn {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .bar-btn.primary { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .bar-btn:hover { border-color: var(--accent); }
+
+  footer {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 32px 64px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.9;
+  }
+  footer p { margin: 0 0 4px; }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    background: rgba(6, 8, 10, .95);
+  }
+  .lightbox.open { display: flex; }
+  .lightbox figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .lightbox img {
+    max-width: calc(100vw - 140px);
+    max-height: 76vh;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, .6);
+  }
+  .lightbox figcaption { color: var(--muted); font-size: 12.5px; text-align: center; }
+  .lightbox figcaption b { color: var(--text); font-weight: 600; }
+  .lb-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: rgba(21, 26, 31, .8);
+    color: var(--text);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .lb-nav:hover { border-color: var(--accent); color: var(--accent); }
+  .lb-prev { left: 24px; }
+  .lb-next { right: 24px; }
+  .lb-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: rgba(21, 26, 31, .8);
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  @media (max-width: 720px) {
+    header { padding: 40px 20px 20px; }
+    h1 { font-size: 27px; }
+    .toolbar-inner { padding: 10px 20px; }
+    main { padding: 18px 20px 130px; }
+    footer { padding: 0 20px 50px; }
+    .grid { grid-template-columns: 1fr; gap: 16px; }
+    .lightbox { padding: 16px; }
+    .lightbox img { max-width: calc(100vw - 40px); max-height: 70vh; }
+    .lb-prev { left: 8px; }
+    .lb-next { right: 8px; }
+    .lb-close { right: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">RestTick · Bing Eye-care Candidates</div>
+  <h1>Bing 护眼图候选</h1>
+  <p class="lede">
+    从 Bing 图片搜索「护眼图片」的结果里筛了 10 张：低饱和、自然风景、光线柔和，尽量避开高对比、密集细节和明显水印。
+    默认按 16:10 裁切，模拟全屏休息遮罩的观感；也可以切换成完整原图核对构图。
+    编号 A–J 供你直接报选。
+  </p>
+  <div class="chips">
+    <span class="chip">10 张候选</span>
+    <span class="chip">Bing 图片搜索</span>
+    <span class="chip">低调色 · 柔光 · 自然风景</span>
+    <span class="chip warn">仅个人使用候选</span>
+    <span class="chip warn">未替换内置图</span>
+  </div>
+
+  <div class="license-card">
+    <strong>来源与授权：</strong>
+    这批图来自 Bing 图片搜索结果，已逐张记录来源页面，但<span class="warn">未确认可再分发或商用的授权</span>。
+    版权归原站点与原作者所有；当前仅作为个人挑选参考，<strong>不要打包进 App、不要商用</strong>。
+    如果以后要正式内置，需要回到来源页面确认授权或换成许可明确的图库素材。
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="toolbar-inner">
+    <div class="seg" role="group" aria-label="预览方式">
+      <button type="button" class="active" data-mode="crop">16:10 遮罩裁切</button>
+      <button type="button" data-mode="full">完整原图</button>
+    </div>
+    <span class="toolbar-note">先看裁切效果，再切完整原图确认构图；点击图片可放大，左右方向键可切换。</span>
+  </div>
+</div>
+
+<main>
+  <div class="grid" id="grid">
+
+    <article class="card" data-code="A" data-title="起伏田野" data-credit="大山谷图库" data-src="images/01-fields-lone-tree.jpg">
+      <div class="media">
+        <img src="images/01-fields-lone-tree.jpg" alt="起伏的绿色田野与一棵孤树，天空泛白" loading="lazy">
+        <span class="badge">A</span>
+        <span class="orient">16:9 横图</span>
+      </div>
+      <div class="card-body">
+        <div class="title-row"><h2>起伏田野</h2></div>
+        <div class="byline">来源：大山谷图库</div>
+        <div class="specs"><span class="spec">饱和度 0.29</span><span class="spec">对比 0.20</span><span class="spec">1600 × 900</span></div>
+        <p class="note">大面积草坡只有一棵树作视觉落点，天空发白、没有硬光；饱和度是这批里最低的一档，适合长时间盯着看。</p>
+        <div class="card-foot">
+          <div class="links">
+            <a href="http://www.dashangu.com/postimg_22867878.html" target="_blank" rel="noopener">来源页面</a>
+            <a href="https://img-baofun.zhhainiao.com/fs/102d6993bd8cd09daa2461c568e67522.jpg" target="_blank" rel="noopener">原图直链</a>
+          </div>
+          <button type="button" class="select-btn">选这张</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-code="B" data-title="林荫水渠" data-credit="元气壁纸" data-src="images/02-tree-lined-canal.jpg">
+      <div class="media">
+        <img src="images/02-tree-lined-canal.jpg" alt="两排高树夹着一条平静的水渠，倒影对称" loading="lazy">
+        <span class="badge">B</span>
+        <span class="orient">16:9 横图</span>
+      </div>
+      <div class="card-body">
+        <div class="title-row"><h2>林荫水渠</h2></div>
+        <div class="byline">来源：元气壁纸</div>
+        <div class="specs"><span class="spec">饱和度 0.34</span><span class="spec">对比 0.26</span><span class="spec">1600 × 900</span></div>
+        <p class="note">两排树向远处收束，水面倒影形成对称；冷绿色调、光线均匀，视线会自然落到中间远处，适合放空。</p>
+        <div class="card-foot">
+          <div class="links">
+            <a href="https://bizhi.ijinshan.com/1/309808.shtml" target="_blank" rel="noopener">来源页面</a>
+            <a href="https://wallpaperm.cmcm.com/f8cc7f1c4529175f82bb54379333cda4.jpg" target="_blank" rel="noopener">原图直链</a>
+          </div>
+          <button type="button" class="select-btn">选这张</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-code="C" data-title="雾中丘陵" data-credit="元气壁纸" data-src="images/03-misty-hills.jpg">
+      <div class="media">
+        <img src="images/03-misty-hills.jpg" alt="晨雾中的层叠丘陵与斜射柔光" loading="lazy">
+        <span class="badge">C</span>
+        <span class="orient">16:9 横图</span>
+      </div>
+      <div class="card-body">
+        <div class="title-row"><h2>雾中丘陵</h2></div>
+        <div class="byline">来源：元气壁纸</div>
+        <div class="specs"><span class="spec">饱和度 0.36</span><span class="spec">对比 0.24</span><span class="spec">1600 × 900</span></div>
+        <p class="note">丘陵一层层退进晨雾，斜光被雾气打散，没有刺眼高光；有明确的远近层次，但细节都被柔化了。</p>
+        <div class="card-foot">
+          <div class="links">
+            <a href="https://bizhi.ijinshan.com/1/311010.shtml" target="_blank" rel="noopener">来源页面</a>
+            <a href="https://wallpaperm.cmcm.com/b97b88bc6257f0eda114ce955be47cd4.jpg" target="_blank" rel="noopener">原图直链</a>
+          </div>
+          <button type="button" class="select-btn">选这张</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-code="D" data-title="雪山峡谷" data-credit="元气壁纸" data-src="images/04-snow-mountain.jpg">
+      <div class="media">
+        <img src="images/04-snow-mountain.jpg" alt="雪山、低谷与低垂云层，整体偏暗" loading="lazy">
+        <span class="badge">D</span>
+        <span class="orient">16:9 横图</span>
+      </div>
+      <div class="card-body">
+        <div class="title-row"><h2>雪山峡谷</h2></div>
+        <div class="byline">来源：元气壁纸</div>
+        <div class="specs"><span class="spec">饱和度 0.38</span><span class="spec">对比 0.16</span><span class="spec">1600 × 900</span></div>
+        <p class="note">雪峰藏在云里，谷底压得很暗；对比度低、色调冷，适合暗色桌面，但画面情绪比其他几张更沉。</p>
+        <div class="card-foot">
+          <div class="links">
+            <a href="https://bizhi.ijinshan.com/8/327002.shtml" target="_blank" rel="noopener">来源页面</a>
+            <a href="https://wallpaperm.cmcm.com/6e79126f8e0a402ea265b39a36cec0a0.jpg" target="_blank" rel="noopener">原图直链</a>
+          </div>
+          <button type="button" class="select-btn">选这张</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-code="E" data-title="湖面山影" data-credit="元气壁纸" data-src="images/05-lake-reflection.jpg">
+      <div class="media">
+        <img src="images/05-lake-reflection.jpg" alt="雪山与暖色云层倒映在平静湖面" loading="lazy">
+        <span class="badge">E</span>
+        <span class="orient">16:9 横图</span>
+      </div>
+      <div class="card-body">
+        <div class="title-row"><h2>湖面山影</h2></div>
+        <div class="byline">来源：元气壁纸</div>
+        <div class="specs"><span class="spec">饱和度 0.40</span><span class="spec">对比 0.22</span><span class="spec">1600 × 900</span></div>
+        <p class="note">山峰与云层完整倒映在湖里，上下对称；暖色云带是这批里最“日落感”的一张，饱和度略高但仍柔和。</p>
+        <div class="card-foot">
+          <div class="links">
+            <a href="https://bizhi.ijinshan.com/8/327477.shtml" target="_blank" rel="noopener">来源页面</a>
+            <a href="https://wallpaperm.cmcm.com/3143bc8b8e99c2f40d16c30e554781d3.jpg" target="_blank" rel="noopener">原图直链</a>
+          </div>
+          <button type="button" class="select-btn">选这张</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-code="F" data-title="丘陵古堡" data-credit="元气壁纸" data-src="images/06-hills-castle.jpg">
+      <div class="media">
+        <img src="images/06-hills-castle.jpg" alt="绿色丘陵上的古堡建筑群与云影" loading="lazy">
+        <span class="badge">F</span>
+        <span class="orient">16:9 横图</span>
+      </div>
+      <div class="card-body">
+        <div class="title-row"><h2>丘陵古堡</h2></div>
+        <div class="byline">来源：元气壁纸</div>
+        <div class="specs"><span class="spec">饱和度 0.43</span><span class="spec">对比 0.19</span><span class="spec">1600 × 900</span></div>
+        <p class="note">大片草坡上有一组古堡建筑，云影把明暗打得很散；比纯自然风景多一点主体，但整体仍是低对比的绿调。</p>
+        <div class="card-foot">
+          <div class="links">
+            <a href="https://bizhi.ijinshan.com/8/327251.shtml" target="_blank" rel="noopener">来源页面</a>
+            <a href="https://wallpaperm.cmcm.com/4e88384dce0bc276512ffab32c98cfc5.jpg" target="_blank" rel="noopener">原图直链</a>
+          </div>
+          <button type="button" class="select-btn">选这张</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-code="G" data-title="牧场海岸" data-credit="闪电家修网" data-src="images/07-pasture-coast.jpg">
+      <div class="media">
+        <img src="images/07-pasture-coast.jpg" alt="平坦牧场、远处海岸与低矮山丘" loading="lazy">
+        <span class="badge">G</span>
+        <span class="orient">16:9 横图</span>
+      </div>
+      <div class="card-body">
+        <div class="title-row"><h2>牧场海岸</h2></div>
+        <div class="byline">来源：闪电家修网</div>
+        <div class="specs"><span class="spec">饱和度 0.43</span><span class="spec">对比 0.15</span><span class="spec">1600 × 900</span></div>
+        <p class="note">牧场一直铺到远处的海岸线，云层很厚、没有直射光；对比度是这批最低的之一，但画面元素稍多。</p>
+        <div class="card-foot">
+          <div class="links">
+            <a href="https://www.jkys120.com/article/849460/" target="_blank" rel="noopener">来源页面</a>
+            <a href="https://www.jkys120.com/jpg/16256744893ONzGC.jpg" target="_blank" rel="noopener">原图直链</a>
+          </div>
+          <button type="button" class="select-btn">选这张</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-code="H" data-title="林间小路" data-credit="元气壁纸" data-src="images/08-forest-path.jpg">
+      <div class="media">
+        <img src="images/08-forest-path.jpg" alt="深绿色树林夹着一条小路，尽头透光" loading="lazy">
+        <span class="badge">H</span>
+        <span class="orient">16:9 横图</span>
+      </div>
+      <div class="card-body">
+        <div class="title-row"><h2>林间小路</h2></div>
+        <div class="byline">来源：元气壁纸</div>
+        <div class="specs"><span class="spec">饱和度 0.43</span><span class="spec">对比 0.14</span><span class="spec">1600 × 900</span></div>
+        <p class="note">树冠把光挡在外面，只有小路尽头透出一点亮；整体偏暗、对比很低，适合夜间使用，白天看会稍显沉。</p>
+        <div class="card-foot">
+          <div class="links">
+            <a href="https://bizhi.ijinshan.com/8/327242.shtml" target="_blank" rel="noopener">来源页面</a>
+            <a href="https://wallpaperm.cmcm.com/4f7f00e30f8c3877f339306fc39f3730.jpg" target="_blank" rel="noopener">原图直链</a>
+          </div>
+          <button type="button" class="select-btn">选这张</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-code="I" data-title="草坡孤树" data-credit="千图网" data-src="images/09-green-hill-tree.jpg">
+      <div class="media">
+        <img src="images/09-green-hill-tree.jpg" alt="柔和草坡上的一棵孤树，斜射光" loading="lazy">
+        <span class="badge">I</span>
+        <span class="orient">16:9 横图</span>
+      </div>
+      <div class="card-body">
+        <div class="title-row"><h2>草坡孤树</h2></div>
+        <div class="byline">来源：千图网</div>
+        <div class="specs"><span class="spec">饱和度 0.47</span><span class="spec">对比 0.15</span><span class="spec">1024 × 576</span></div>
+        <p class="note">和 A 类似是“草坡 + 孤树”，但光从左上方斜下来，树影更明显；分辨率只有 1024 × 576，放大到全屏会偏软。</p>
+        <div class="card-foot">
+          <div class="links">
+            <a href="https://www.58pic.com/newpic/71255676.html" target="_blank" rel="noopener">来源页面</a>
+            <a href="https://preview.qiantucdn.com/58pic/71/25/56/76858PIC6QNu2hvzqiUa8_origin_PIC2018.jpg!w1024_new_small_1" target="_blank" rel="noopener">原图直链</a>
+          </div>
+          <button type="button" class="select-btn">选这张</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card" data-code="J" data-title="草甸木屋" data-credit="元气壁纸" data-src="images/10-meadow-hut.jpg">
+      <div class="media">
+        <img src="images/10-meadow-hut.jpg" alt="草甸上的木屋与远处的雪山" loading="lazy">
+        <span class="badge">J</span>
+        <span class="orient">16:9 横图</span>
+      </div>
+      <div class="card-body">
+        <div class="title-row"><h2>草甸木屋</h2></div>
+        <div class="byline">来源：元气壁纸</div>
+        <div class="specs"><span class="spec">饱和度 0.53</span><span class="spec">对比 0.24</span><span class="spec">1600 × 900</span></div>
+        <p class="note">木屋落在草甸中央，背后是雪山；构图稳定、有生活感，但草地饱和度是这批里偏高的一张。</p>
+        <div class="card-foot">
+          <div class="links">
+            <a href="https://bizhi.ijinshan.com/8/326342.shtml" target="_blank" rel="noopener">来源页面</a>
+            <a href="https://wallpaperm.cmcm.com/be62cd05bc3b7995dc0cae8d74de3bfc.jpg" target="_blank" rel="noopener">原图直链</a>
+          </div>
+          <button type="button" class="select-btn">选这张</button>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</main>
+
+<footer>
+  <p>指标 S 为平均饱和度、C 为亮度标准差（基于 64 × 64 采样计算），只用于横向比较，不代表专业色彩测量。</p>
+  <p>图片按长边 1600 px 保存（I 为原始 1024 × 576，未放大），仅用于本地预览；来源页面与原图直链已逐张标注。</p>
+  <p>这批只是个人使用候选，未修改 App 代码、未动 Resources/Backgrounds、未重新打包。选定后告诉编号（A–J）即可。</p>
+</footer>
+
+<div class="selection-bar" id="selectionBar" aria-live="polite">
+  <span class="picked" id="pickedText"></span>
+  <button type="button" class="bar-btn primary" id="copyBtn">复制编号</button>
+  <button type="button" class="bar-btn" id="clearBtn">清空</button>
+</div>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="查看大图">
+  <button type="button" class="lb-close" id="lbClose" aria-label="关闭">✕</button>
+  <button type="button" class="lb-nav lb-prev" id="lbPrev" aria-label="上一张">‹</button>
+  <figure>
+    <img id="lbImage" src="" alt="">
+    <figcaption id="lbCaption"></figcaption>
+  </figure>
+  <button type="button" class="lb-nav lb-next" id="lbNext" aria-label="下一张">›</button>
+</div>
+
+<script>
+  (function () {
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
+    var body = document.body;
+    var selected = new Set();
+    var current = 0;
+
+    var bar = document.getElementById('selectionBar');
+    var pickedText = document.getElementById('pickedText');
+    var copyBtn = document.getElementById('copyBtn');
+    var clearBtn = document.getElementById('clearBtn');
+
+    var lightbox = document.getElementById('lightbox');
+    var lbImage = document.getElementById('lbImage');
+    var lbCaption = document.getElementById('lbCaption');
+
+    document.querySelectorAll('.seg button').forEach(function (button) {
+      button.addEventListener('click', function () {
+        document.querySelectorAll('.seg button').forEach(function (b) { b.classList.remove('active'); });
+        button.classList.add('active');
+        body.classList.toggle('full', button.dataset.mode === 'full');
+      });
+    });
+
+    function updateBar() {
+      var codes = Array.from(selected).sort();
+      if (!codes.length) {
+        bar.classList.remove('show');
+        pickedText.textContent = '';
+        return;
+      }
+      bar.classList.add('show');
+      pickedText.innerHTML = '已选 <b>' + codes.length + '</b> 张 · ' + codes.join('、');
+    }
+
+    cards.forEach(function (card, index) {
+      var button = card.querySelector('.select-btn');
+      var image = card.querySelector('.media img');
+
+      button.addEventListener('click', function () {
+        var code = card.dataset.code;
+        if (selected.has(code)) {
+          selected.delete(code);
+          card.classList.remove('selected');
+          button.textContent = '选这张';
+        } else {
+          selected.add(code);
+          card.classList.add('selected');
+          button.textContent = '已选 ✓';
+        }
+        updateBar();
+      });
+
+      image.addEventListener('click', function () {
+        current = index;
+        renderLightbox();
+        lightbox.classList.add('open');
+      });
+    });
+
+    function renderLightbox() {
+      var card = cards[current];
+      lbImage.src = card.dataset.src;
+      lbImage.alt = card.dataset.title;
+      lbCaption.innerHTML = '<b>' + card.dataset.code + ' · ' + card.dataset.title + '</b>　来源：' + card.dataset.credit;
+    }
+
+    function closeLightbox() { lightbox.classList.remove('open'); }
+
+    document.getElementById('lbClose').addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', function (event) {
+      if (event.target === lightbox) closeLightbox();
+    });
+    document.getElementById('lbPrev').addEventListener('click', function (event) {
+      event.stopPropagation();
+      current = (current - 1 + cards.length) % cards.length;
+      renderLightbox();
+    });
+    document.getElementById('lbNext').addEventListener('click', function (event) {
+      event.stopPropagation();
+      current = (current + 1) % cards.length;
+      renderLightbox();
+    });
+    document.addEventListener('keydown', function (event) {
+      if (!lightbox.classList.contains('open')) return;
+      if (event.key === 'Escape') closeLightbox();
+      if (event.key === 'ArrowLeft') document.getElementById('lbPrev').click();
+      if (event.key === 'ArrowRight') document.getElementById('lbNext').click();
+    });
+
+    clearBtn.addEventListener('click', function () {
+      selected.clear();
+      cards.forEach(function (card) {
+        card.classList.remove('selected');
+        card.querySelector('.select-btn').textContent = '选这张';
+      });
+      updateBar();
+    });
+
+    copyBtn.addEventListener('click', function () {
+      var text = Array.from(selected).sort().join('、');
+      if (!text) return;
+      var done = function () {
+        var original = copyBtn.textContent;
+        copyBtn.textContent = '已复制';
+        setTimeout(function () { copyBtn.textContent = original; }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+      } else {
+        fallbackCopy(text, done);
+      }
+    });
+
+    function fallbackCopy(text, done) {
+      var area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      document.body.removeChild(area);
+    }
+  })();
+</script>
+</body>
+</html>
